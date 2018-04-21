@@ -1,6 +1,8 @@
 package com.baeldung.rest.cucumber;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import cucumber.api.DataTable;
+import cucumber.api.java.en.Given;
 import cucumber.api.java.en.Then;
 import cucumber.api.java.en.When;
 import org.apache.http.HttpResponse;
@@ -12,6 +14,9 @@ import org.apache.http.impl.client.HttpClients;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
@@ -37,12 +42,14 @@ public class StepDefinition {
     private final InputStream jsonInputStream = this.getClass().getClassLoader().getResourceAsStream("cucumber.json");
     private final String jsonString = new Scanner(jsonInputStream, "UTF-8").useDelimiter("\\Z").next();
 
-    private final WireMockServer wireMockServer = new WireMockServer();
+
     private final CloseableHttpClient httpClient = HttpClients.createDefault();
+    String responseString;
+    String request;
 
     @When("^users upload data on a project$")
     public void usersUploadDataOnAProject() throws IOException {
-        wireMockServer.start();
+        CucumberIntegrationTest.wireMockServer.start();
 
         configureFor("localhost", 8080);
         stubFor(post(urlEqualTo(CREATE_PATH))
@@ -60,12 +67,69 @@ public class StepDefinition {
         verify(postRequestedFor(urlEqualTo(CREATE_PATH))
                 .withHeader("content-type", equalTo(APPLICATION_JSON)));
 
-        wireMockServer.stop();
+        CucumberIntegrationTest.wireMockServer.stop();
     }
+
+
+    @Given("^I configure 'abc.com/createUser' api with following '(request|response)':$")
+    public void configure_api(String configType, DataTable dataTable) throws Throwable {
+
+        if("request".equals(configType)){
+            List<Map<String, String>> requestMap = dataTable.asMaps(String.class, String.class);
+            request = requestMap.get(0).get("Request");
+        }else {
+            List<Map<String, String>> requestResponse = dataTable.asMaps(String.class, String.class);
+            String testingFramework = requestResponse.get(0).get("testing-framework");
+            String testingSupportedLanguage = requestResponse.get(0).get("testing-supported-language");
+            String testingWebsite = requestResponse.get(0).get("testing-website");
+            //TODO: Bu degiskenleri bir objeye atayip daha sonra JSON'a cevirip response assign edilir.
+
+            String response = jsonString;
+            stubFor(get(urlEqualTo("/projects/"+request)).withHeader("accept", equalTo(APPLICATION_JSON))
+                    .willReturn(aResponse().withBody(response)));
+        }
+
+
+
+
+    }
+
+    @Given("^I do call$")
+    public void I_do_call() throws Throwable {
+
+        String projectName = "Cucumber";
+        HttpGet request = new HttpGet("http://localhost:8080/projects/" + projectName.toLowerCase());
+        request.addHeader("accept", APPLICATION_JSON);
+        HttpResponse httpResponse = httpClient.execute(request);
+        responseString = convertResponseToString(httpResponse);
+
+
+    }
+
+    @Given("^The response is:")
+    public void the_response(DataTable dataTable) throws Throwable {
+
+        List<Map<String, String>> requestResponse = dataTable.asMaps(String.class, String.class);
+        String testingFramework = requestResponse.get(0).get("testing-framework");
+        String testingSupportedLanguage = requestResponse.get(0).get("testing-supported-language");
+        String testingWebsite = requestResponse.get(0).get("testing-website");
+        //TODO: Bu degiskenleri bir objeye atayip daha sonra JSON'a cevirip response assign edilir.
+
+        String response = jsonString;
+
+
+        assertThat(responseString, containsString("\"testing-framework\": \"cucumber\""));
+        assertThat(responseString, containsString("\"website\": \"cucumber.io\""));
+        verify(getRequestedFor(urlEqualTo("/projects/cucumber")).withHeader("accept", equalTo(APPLICATION_JSON)));
+
+        CucumberIntegrationTest.wireMockServer.stop();
+    }
+
+
 
     @When("^users want to get information on the (.+) project$")
     public void usersGetInformationOnAProject(String projectName) throws IOException {
-        wireMockServer.start();
+        CucumberIntegrationTest.wireMockServer.start();
 
         configureFor("localhost", 8080);
         stubFor(get(urlEqualTo("/projects/cucumber")).withHeader("accept", equalTo(APPLICATION_JSON))
@@ -80,7 +144,7 @@ public class StepDefinition {
         assertThat(responseString, containsString("\"website\": \"cucumber.io\""));
         verify(getRequestedFor(urlEqualTo("/projects/cucumber")).withHeader("accept", equalTo(APPLICATION_JSON)));
 
-        wireMockServer.stop();
+        CucumberIntegrationTest.wireMockServer.stop();
     }
 
     @Then("^the server should handle it and return a success status$")
@@ -89,6 +153,7 @@ public class StepDefinition {
 
     @Then("^the requested data is returned$")
     public void theRequestedDataIsReturned() {
+
     }
 
     private String convertResponseToString(HttpResponse response) throws IOException {
