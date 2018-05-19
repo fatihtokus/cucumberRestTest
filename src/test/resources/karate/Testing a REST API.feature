@@ -1,4 +1,4 @@
-Feature: Testing a REST API with Karate
+Feature: Testing a REST API
 
   @solo
   Scenario: Do request from currency api
@@ -19,10 +19,10 @@ Feature: Testing a REST API with Karate
 
   @solo
   Scenario: Do request from currency api
-    #Given I configure 'abc.com/createUser' api
-    #When I do call 'abc.com/createUser' api with:
-     # | Request  |
-      #| cucumber |
+#    Given I configure 'abc.com/createUser' api
+#    When I do call 'abc.com/createUser' api with:
+#      | Request  |
+#      | cucumber |
     Then The response is:
       | testing-framework | testing-supported-language          | testing-website |
       | cucumber          | Ruby,Java,Javascript,PHP,Python,C++ | cucumber.io     |
