@@ -123,7 +123,7 @@
 
     <properties>
         <!-- marshalling -->
-        <jackson.version>2.9.10.4</jackson.version>
+        <jackson.version>2.12.7.1</jackson.version>
 
         <!-- util -->
         <guava.version>19.0</guava.version>
